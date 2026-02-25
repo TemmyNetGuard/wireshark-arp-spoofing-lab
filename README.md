@@ -1,183 +1,171 @@
+
+```markdown
 # 🔍 Network Traffic Analysis & ARP Spoofing Lab
 
 ## 📌 Project Overview
-This project demonstrates a real-world cybersecurity lab setup using two virtual machines to simulate network traffic analysis and an ARP spoofing attack. The lab was conducted in a controlled environment using VMware Workstation Pro.
+This project demonstrates a **real-world cybersecurity lab** using two virtual machines to simulate **normal network traffic analysis** and an **ARP spoofing (MITM)** attack. The entire lab was conducted in a fully isolated environment using **VMware Workstation Pro**.
 
-| Role | Machine | IP Address |
-|------|---------|------------|
-| 🔴 Attacker | Kali Linux | 192.168.0.164 |
-| 🔵 Victim | Ubuntu 24.04 | 192.168.0.246 |
+| Role       | Machine          | IP Address      |
+|------------|------------------|-----------------|
+| 🔴 Attacker | Kali Linux       | `192.168.0.164` |
+| 🔵 Victim   | Ubuntu 24.04 LTS | `192.168.0.246` |
 
 ---
 
 ## 🎯 Objectives
-- Set up an isolated virtual cybersecurity lab using VMware Workstation
-- Capture and analyze normal network traffic using Wireshark
-- Simulate a Man-in-the-Middle (MITM) attack using ARP Spoofing
-- Detect and analyze ARP spoofing traffic patterns in Wireshark
-- Understand how attackers intercept network communications
+- Build an isolated virtual cybersecurity lab with VMware Workstation
+- Capture and analyze legitimate network traffic using Wireshark
+- Perform a Man-in-the-Middle (MITM) attack via ARP Spoofing
+- Detect and analyze ARP poisoning patterns in Wireshark
+- Understand how attackers can intercept and manipulate network communications
 
 ---
 
 ## 🛠️ Tools & Technologies Used
-- **VMware Workstation Pro** — Virtual machine environment
+- **VMware Workstation Pro** — Virtual machine hypervisor
 - **Kali Linux** — Attacker machine
 - **Ubuntu 24.04 LTS** — Victim machine
-- **Wireshark** — Network traffic capture and analysis
-- **Bettercap** — ARP spoofing tool
-- **ifconfig / ping** — Network configuration and connectivity testing
+- **Wireshark** — Packet capture & analysis
+- **Bettercap** — ARP spoofing & MITM framework
+- **ifconfig / ping** — Network configuration & connectivity testing
 
 ---
 
 ## ⚙️ Lab Setup & Network Configuration
+Both VMs were placed on a **Bridged Network** adapter so they behave as real devices on the same local network.
 
-Both VMs were configured on a **Bridged Network** so they operate as real devices on the same physical network — simulating a real-world environment.
-
-**Step 1 — Check IP addresses on both VMs using ifconfig**
-
-**Step 2 — Configure both VMs to Bridged network adapter in VMware settings**
-
-**Step 3 — Restart both VMs and verify new IP addresses:**
-- Kali Linux: `192.168.0.164`
-- Ubuntu: `192.168.0.246`
-
-**Step 4 — Verify connectivity by pinging both VMs:**
+**Step-by-step setup:**
+1. Check IP addresses on both machines using `ifconfig`
+2. Change both VMs to **Bridged** network adapter in VMware settings
+3. Restart VMs and confirm new IPs:
+   - Kali Linux → `192.168.0.164`
+   - Ubuntu → `192.168.0.246`
+4. Verify bidirectional connectivity with ping
 
 ### ✅ Kali Pings Ubuntu
-<p align="center">
-  <img src="Kali_pings_Ubuntu.png" width="700">
-</p>
+<div align="center">
+  <img src="Kali pings Ubuntu.png" width="700" alt="Kali successfully pinging Ubuntu">
+</div>
 
-Kali (192.168.0.164) successfully pinged Ubuntu (192.168.0.246) with 0% packet loss confirming network connectivity.
-
----
+**Result:** 0% packet loss — full connectivity confirmed.
 
 ### ✅ Ubuntu Pings Kali
-<p align="center">
-  <img src="Ubuntu_pings_Kali.png" width="700">
-</p>
+<div align="center">
+  <img src="Ubuntu pings Kali.png" width="700" alt="Ubuntu successfully pinging Kali">
+</div>
 
-Ubuntu (192.168.0.246) successfully pinged Kali (192.168.0.164) with 0% packet loss confirming bidirectional communication.
+**Result:** 0% packet loss — bidirectional communication working.
 
 ---
 
 ## 🔍 Phase 1 — Normal Traffic Capture
+Wireshark was installed on Ubuntu and used to capture baseline traffic while Kali generated ping requests.
 
-Wireshark was installed on Ubuntu using the following commands:
+**Installation commands (Ubuntu):**
 ```bash
 sudo add-apt-repository ppa:wireshark-dev/stable
 sudo apt-get update
-sudo apt-get install wireshark
+sudo apt-get install wireshark -y
 sudo wireshark
 ```
 
-With Wireshark running, Kali pinged Ubuntu to generate traffic. The following protocols were observed and filtered:
-
-| Protocol | Color Code | Description |
-|---------|------------|-------------|
-| ICMP | Pink | Ping requests and replies between VMs |
-| ARP | Yellow | Address Resolution Protocol packets |
-| TCP | Dark Gray | ACK traffic |
-| Errors | Black | Packets with errors |
-
 ### 📸 Ubuntu Captures Traffic from Kali
-<p align="center">
-  <img src="Ubuntu_captures_traffic_from_kali.png" width="700">
-</p>
-
-Wireshark on Ubuntu showing normal ICMP ping traffic and ARP packets between the two VMs. The Statistics menu was used to get a visual representation of all captured traffic.
-
----
+<div align="center">
+  <img src="Ubuntu captures traffic from kali.png" width="700" alt="Wireshark capture on Ubuntu showing normal traffic from Kali">
+</div>
 
 ### 📸 Kali Captures Traffic from Ubuntu
-<p align="center">
-  <img src="Kail_capture_traffic_from_ubuntu.png" width="700">
-</p>
+<div align="center">
+  <img src="Kail capture traffic from ubuntu.png" width="700" alt="Wireshark capture on Kali showing traffic from Ubuntu">
+</div>
 
-Wireshark on Kali showing mixed traffic including ICMP, ARP, and TLS packets from Ubuntu's network activity.
+**Observed protocols (normal traffic):**
+| Protocol | Color     | Description                     |
+|----------|-----------|---------------------------------|
+| ICMP     | Pink      | Ping requests & replies         |
+| ARP      | Yellow    | Address Resolution Protocol     |
+| TCP      | Dark Gray | ACK packets                     |
+| Errors   | Black     | Corrupted / error packets       |
 
 ---
 
 ## ⚠️ Phase 2 — ARP Spoofing Attack (MITM Simulation)
 
 ### What is ARP Spoofing?
-ARP Spoofing is a Man-in-the-Middle attack where the attacker sends fake ARP messages to associate their MAC address with a legitimate IP address. This allows the attacker to intercept, modify, or stop traffic between two devices.
+ARP Spoofing (also called ARP Poisoning) is a Layer-2 attack where the attacker sends forged ARP messages to associate their own MAC address with the IP address of a legitimate device. This allows the attacker to become the **Man-in-the-Middle** and intercept/modify traffic.
 
-### Attack Setup
-Bettercap was installed and configured on Kali Linux:
-
+### Attack Execution (on Kali Linux)
 ```bash
 # Install Bettercap
 sudo apt update && sudo apt install bettercap -y
 
-# Launch Bettercap on the network interface
+# Launch Bettercap
 sudo bettercap -iface eth0
 
-# Set the target (Ubuntu VM)
+# Inside Bettercap:
 set arp.spoof.targets 192.168.0.246
-
-# Launch the ARP spoofing attack
 arp.spoof on
 ```
 
 ### 📸 ARP Spoofing Attack Launched from Kali
-<p align="center">
-  <img src="ARP_Spoofing.png" width="700">
-</p>
+<div align="center">
+  <img src="ARP Spoofing.png" width="700" alt="Bettercap running ARP spoofing attack">
+</div>
 
-Bettercap successfully launched the ARP spoofing attack against Ubuntu (192.168.0.246). The tool identified the target endpoint and began poisoning the ARP table — positioning Kali as a Man-in-the-Middle between Ubuntu and the gateway.
+**Bettercap successfully poisoned the ARP table of the Ubuntu victim.**
 
----
+### 📸 ARP Spoofing Captured in Wireshark (Ubuntu)
+<div align="center">
+  <img src="ARP spoofing captured.png" width="700" alt="Wireshark showing massive ARP flood from attacker">
+</div>
 
-### 📸 ARP Spoofing Detected in Wireshark on Ubuntu
-<p align="center">
-  <img src="ARP_spoofing_captured.png" width="700">
-</p>
-
-Wireshark on Ubuntu filtered by **ARP protocol** clearly shows the ARP spoofing attack in progress. The flood of ARP packets from multiple sources indicates the ARP table poisoning — a clear indicator of a MITM attack that a SOC analyst would flag as malicious activity.
+**Clear indicators of attack:**
+- Sudden flood of ARP "Who has" and "Is at" replies
+- Attacker MAC address repeatedly claiming the gateway IP
+- ARP table poisoning visible in real time
 
 ---
 
 ## 🔐 Security Observations & Analysis
 
-**During Normal Traffic:**
-- ICMP packets showed clean ping requests and replies
-- ARP traffic was minimal and legitimate
-- Traffic patterns were consistent and predictable
+**Normal Traffic:**
+- Clean ICMP ping requests/replies
+- Minimal, legitimate ARP traffic
+- Predictable and consistent patterns
 
-**During ARP Spoofing Attack:**
-- Sudden flood of ARP packets from the attacker
-- Multiple "Who has" ARP requests targeting the victim
-- ARP table poisoning visible in Wireshark capture
-- Attacker positioned as MITM between victim and gateway
+**During ARP Spoofing:**
+- Massive increase in ARP packets from attacker
+- Duplicate IP-to-MAC mappings
+- Attacker positioned between victim and gateway
 
 **Key Indicators of Compromise (IOCs):**
-- Unusual volume of ARP packets
-- Duplicate IP-to-MAC address mappings
-- Unexpected ARP replies without corresponding requests
+- Unusual volume of ARP traffic
+- ARP replies without matching requests
+- Rapid changes in ARP cache
 
 ---
 
 ## 🛡️ Defensive Recommendations
-- Enable **Dynamic ARP Inspection (DAI)** on network switches
-- Use **Static ARP entries** for critical devices
-- Deploy **network monitoring tools** to detect ARP anomalies
-- Implement **VPNs and encrypted communications** to reduce MITM impact
-- Use **Intrusion Detection Systems (IDS)** to alert on ARP flooding
+- Enable **Dynamic ARP Inspection (DAI)** on switches
+- Use **static ARP entries** for critical devices
+- Deploy **IDS/IPS** that monitor ARP anomalies
+- Implement **VPNs** or **encrypted protocols** (TLS, SSH)
+- Regular network monitoring with Wireshark or Zeek
 
 ---
 
 ## 🚀 Skills Demonstrated
-- Virtual lab setup and network configuration
-- Network traffic capture and protocol analysis
-- ARP spoofing attack simulation using Bettercap
-- Wireshark filtering and traffic pattern identification
-- Threat detection and security analysis
-- Technical documentation and findings reporting
+- Virtual lab architecture & network bridging
+- Wireshark packet capture & protocol analysis
+- ARP spoofing simulation with Bettercap
+- Real-time threat detection
+- Professional technical documentation
 
 ---
 
 ## 📌 Author
-**TemmyNetGuard**
-Cybersecurity Student at **Altschool Africa** | ISC² Certified in Cybersecurity (CC)
-Building offensive and defensive security skills one lab at a time. 🔐
+**TemmyNetGuard**  
+Cybersecurity Student at **Altschool Africa** | ISC² Certified in Cybersecurity (CC)  
+Building offensive & defensive security skills one lab at a time. 🔐
+```
+
